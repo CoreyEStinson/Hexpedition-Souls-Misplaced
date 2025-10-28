@@ -13,6 +13,13 @@ public class PlayerMovement : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        
+        // Ensure Rigidbody2D is set up correctly to prevent sticking
+        if (rb != null)
+        {
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        }
     }
 
     void Update()
