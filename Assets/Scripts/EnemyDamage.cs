@@ -58,13 +58,13 @@ public class EnemyDamage : MonoBehaviour
         
         if (playerHealth != null)
         {
-            // Deal damage
-            playerHealth.TakeDamage(damageAmount);
+            // Deal damage with knockback (pass enemy position for knockback direction)
+            playerHealth.TakeDamage(damageAmount, transform.position);
 
             // Update last damage time
             lastDamageTime = Time.time;
 
-            Debug.Log($"Enemy dealt {damageAmount} damage to player");
+            Debug.Log($"Enemy dealt {damageAmount} damage to player with knockback");
         }
         else
         {

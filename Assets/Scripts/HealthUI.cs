@@ -14,7 +14,10 @@ public class HealthUI : MonoBehaviour
         if (spriteRenderer == null)
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
+
         }
+        // Initialize to full health sprite at start
+        UpdateHealth(6);
     }
 
     /// <summary>

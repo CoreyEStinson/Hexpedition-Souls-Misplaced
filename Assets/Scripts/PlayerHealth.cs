@@ -13,6 +13,11 @@ public class PlayerHealth : MonoBehaviour
     [Header("Invincibility Settings")]
     [SerializeField] private float invincibilityDuration = 1f;
     
+    [Header("Knockback Settings")]
+    [SerializeField] private float knockbackForce = 10f;
+    [SerializeField] private float knockbackDuration = 0.5f;
+    [SerializeField] private float knockbackUpwardForce = 5f;
+    
     [Header("Visual Feedback")]
     [SerializeField] private bool enableFlashing = true;
     [SerializeField] private float flashSpeed = 10f;
@@ -20,6 +25,9 @@ public class PlayerHealth : MonoBehaviour
 
     private bool isInvincible = false;
     private float invincibilityTimer = 0f;
+    private bool isKnockedBack = false;
+    private float knockbackTimer = 0f;
+    private Rigidbody2D rb;
 
     private void Awake()
     {
@@ -27,6 +35,8 @@ public class PlayerHealth : MonoBehaviour
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
+
+        rb = GetComponent<Rigidbody2D>();
         
         currentHealth = maxHealth;
         UpdateHealthUI();
@@ -34,6 +44,16 @@ public class PlayerHealth : MonoBehaviour
 
     private void Update()
     {
+        // Handle knockback timer
+        if (isKnockedBack)
+        {
+            knockbackTimer -= Time.deltaTime;
+            if (knockbackTimer <= 0f)
+            {
+                isKnockedBack = false;
+            }
+        }
+
         // Handle invincibility timer
         if (isInvincible)
         {
@@ -90,6 +110,57 @@ public class PlayerHealth : MonoBehaviour
         invincibilityTimer = invincibilityDuration;
     }
 
+    public void TakeDamage(int damage, Vector2 damageSourcePosition)
+    {
+        if (isInvincible)
+        {
+            return;
+        }
+
+        // Apply damage
+        currentHealth -= damage;
+        currentHealth = Mathf.Max(currentHealth, 0);
+        Debug.Log($"Player took {damage} damage. Current health: {currentHealth}");
+
+        // Update UI
+        UpdateHealthUI();
+
+        // Apply knockback
+        ApplyKnockback(damageSourcePosition);
+
+        // Check if dead
+        if (currentHealth <= 0)
+        {
+            Die();
+            return;
+        }
+
+        // Start invincibility
+        isInvincible = true;
+        invincibilityTimer = invincibilityDuration;
+    }
+
+    private void ApplyKnockback(Vector2 damageSourcePosition)
+    {
+        if (rb == null)
+        {
+            return;
+        }
+
+        // Calculate knockback direction (away from damage source)
+        Vector2 knockbackDirection = ((Vector2)transform.position - damageSourcePosition).normalized;
+        
+        // Apply horizontal knockback and add some upward force
+        Vector2 knockbackVelocity = new Vector2(knockbackDirection.x * knockbackForce, knockbackUpwardForce);
+        rb.linearVelocity = knockbackVelocity;
+
+        // Set knockback state
+        isKnockedBack = true;
+        knockbackTimer = knockbackDuration;
+
+        Debug.Log($"Knockback applied: {knockbackVelocity}");
+    }
+
     private void Die()
     {
         Debug.Log("Player died!");
@@ -102,6 +173,11 @@ public class PlayerHealth : MonoBehaviour
     public bool IsInvincible()
     {
         return isInvincible;
+    }
+
+    public bool IsKnockedBack()
+    {
+        return isKnockedBack;
     }
 
     public int GetCurrentHealth()

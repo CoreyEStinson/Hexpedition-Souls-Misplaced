@@ -7,7 +7,9 @@ public class EnemyMovement : MonoBehaviour
     [SerializeField] private float patrolSpeed = 2f;
     [SerializeField] private float chaseSpeed = 4f;
     [SerializeField] private float detectionRange = 5f;
+    [SerializeField] private float chaseLinger = 3f; // Time to maintain chase speed after losing sight
     [SerializeField] private LayerMask playerLayer;
+    [SerializeField] private LayerMask obstacleLayer; // Walls and obstacles
 
     [Header("Ledge Check")]
     [SerializeField] private bool enableLedgeCheck = true;
@@ -15,11 +17,17 @@ public class EnemyMovement : MonoBehaviour
     [SerializeField] private float ledgeCheckDistance = 1f;
     [SerializeField] private LayerMask groundLayer;
 
+    [Header("Wall Check")]
+    [SerializeField] private bool enableWallCheck = true;
+    [SerializeField] private float wallCheckDistance = 0.5f;
+    [SerializeField] private Vector2 wallCheckOffset = new Vector2(0.5f, 0.5f);
+
     [Header("References")]
     [SerializeField] private Transform playerTransform;
 
     private Rigidbody2D body;
     private bool facingRight = true;
+    private float lastSeenPlayerTime = -100f; // Time when player was last seen
 
     private void Awake()
     {
@@ -37,40 +45,50 @@ public class EnemyMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        bool chasingPlayer = IsPlayerWithinRange();
+        bool canSeePlayer = IsPlayerWithinRange();
+        
+        // Update last seen time if we can see the player
+        if (canSeePlayer)
+        {
+            lastSeenPlayerTime = Time.time;
+        }
+
+        // Check if we should be chasing (can see or recently saw player)
+        bool shouldChase = canSeePlayer || (Time.time - lastSeenPlayerTime < chaseLinger);
+        
         float desiredSpeed = 0f;
 
-        if (chasingPlayer)
+        if (shouldChase)
         {
             float direction = Mathf.Sign(playerTransform.position.x - transform.position.x);
-            if (direction == 0f)
+            if (Mathf.Abs(direction) < 0.01f)
             {
                 direction = facingRight ? 1f : -1f;
             }
 
             facingRight = direction > 0f;
 
-            if (IsGroundAhead())
+            if (IsGroundAhead() && !IsWallAhead())
             {
                 desiredSpeed = chaseSpeed * direction;
             }
         }
         else
         {
-            if (!IsGroundAhead())
+            if (!IsGroundAhead() || IsWallAhead())
             {
                 Flip();
             }
 
-            if (IsGroundAhead())
+            if (IsGroundAhead() && !IsWallAhead())
             {
                 desiredSpeed = (facingRight ? 1f : -1f) * patrolSpeed;
             }
         }
 
-    Vector2 currentVelocity = body.linearVelocity;
-    currentVelocity.x = desiredSpeed;
-    body.linearVelocity = currentVelocity;
+        Vector2 currentVelocity = body.linearVelocity;
+        currentVelocity.x = desiredSpeed;
+        body.linearVelocity = currentVelocity;
         UpdateFacing();
     }
 
@@ -81,13 +99,16 @@ public class EnemyMovement : MonoBehaviour
             return false;
         }
 
-        // Cast rays to the left and right
+        // Cast rays to the left and right, checking for obstacles
         Vector2 origin = transform.position;
-        RaycastHit2D hitRight = Physics2D.Raycast(origin, Vector2.right, detectionRange, playerLayer);
-        RaycastHit2D hitLeft = Physics2D.Raycast(origin, Vector2.left, detectionRange, playerLayer);
+        RaycastHit2D hitRight = Physics2D.Raycast(origin, Vector2.right, detectionRange, playerLayer | obstacleLayer);
+        RaycastHit2D hitLeft = Physics2D.Raycast(origin, Vector2.left, detectionRange, playerLayer | obstacleLayer);
 
-        return (hitRight.collider != null && hitRight.collider.transform == playerTransform) ||
-               (hitLeft.collider != null && hitLeft.collider.transform == playerTransform);
+        // Check if we hit the player (not an obstacle)
+        bool canSeeRight = hitRight.collider != null && hitRight.collider.transform == playerTransform;
+        bool canSeeLeft = hitLeft.collider != null && hitLeft.collider.transform == playerTransform;
+
+        return canSeeRight || canSeeLeft;
     }
 
     private bool IsGroundAhead()
@@ -100,6 +121,20 @@ public class EnemyMovement : MonoBehaviour
         Vector2 origin = (Vector2)transform.position;
         origin += new Vector2(facingRight ? ledgeCheckOffset.x : -ledgeCheckOffset.x, ledgeCheckOffset.y);
         RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, ledgeCheckDistance, groundLayer);
+        return hit.collider != null;
+    }
+
+    private bool IsWallAhead()
+    {
+        if (!enableWallCheck)
+        {
+            return false;
+        }
+
+        Vector2 origin = (Vector2)transform.position;
+        origin += new Vector2(facingRight ? wallCheckOffset.x : -wallCheckOffset.x, wallCheckOffset.y);
+        Vector2 direction = facingRight ? Vector2.right : Vector2.left;
+        RaycastHit2D hit = Physics2D.Raycast(origin, direction, wallCheckDistance, obstacleLayer | groundLayer);
         return hit.collider != null;
     }
 
@@ -119,8 +154,14 @@ public class EnemyMovement : MonoBehaviour
     {
         // Draw ledge check ray
         Gizmos.color = Color.yellow;
-        Vector3 origin = transform.position + new Vector3(facingRight ? ledgeCheckOffset.x : -ledgeCheckOffset.x, ledgeCheckOffset.y, 0f);
-        Gizmos.DrawLine(origin, origin + Vector3.down * ledgeCheckDistance);
+        Vector3 ledgeOrigin = transform.position + new Vector3(facingRight ? ledgeCheckOffset.x : -ledgeCheckOffset.x, ledgeCheckOffset.y, 0f);
+        Gizmos.DrawLine(ledgeOrigin, ledgeOrigin + Vector3.down * ledgeCheckDistance);
+
+        // Draw wall check ray
+        Gizmos.color = Color.cyan;
+        Vector3 wallOrigin = transform.position + new Vector3(facingRight ? wallCheckOffset.x : -wallCheckOffset.x, wallCheckOffset.y, 0f);
+        Vector3 wallDirection = facingRight ? Vector3.right : Vector3.left;
+        Gizmos.DrawLine(wallOrigin, wallOrigin + wallDirection * wallCheckDistance);
 
         // Draw player detection rays
         Gizmos.color = Color.red;

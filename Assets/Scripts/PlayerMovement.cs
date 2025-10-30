@@ -9,10 +9,13 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody2D rb;
     private bool isGrounded;
     private float moveDirection;
+    private PlayerHealth playerHealth;
+    private bool facingRight = true;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        playerHealth = GetComponent<PlayerHealth>();
         
         // Ensure Rigidbody2D is set up correctly to prevent sticking
         if (rb != null)
@@ -24,11 +27,28 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        // Check if player is knocked back - if so, don't allow input
+        if (playerHealth != null && playerHealth.IsKnockedBack())
+        {
+            moveDirection = 0f;
+            return;
+        }
+
         // Get input
         float horizontal = Input.GetAxis("Horizontal");
 
         // Store movement direction
         moveDirection = horizontal;
+
+        // Flip player based on movement direction
+        if (horizontal > 0f && !facingRight)
+        {
+            Flip();
+        }
+        else if (horizontal < 0f && facingRight)
+        {
+            Flip();
+        }
 
         // Jump
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
@@ -39,6 +59,12 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        // Don't override velocity if player is knocked back
+        if (playerHealth != null && playerHealth.IsKnockedBack())
+        {
+            return;
+        }
+
         // Move the player using physics
         rb.linearVelocity = new Vector2(moveDirection * moveSpeed, rb.linearVelocity.y);
     }
@@ -82,5 +108,17 @@ public class PlayerMovement : MonoBehaviour
             }
         }
         return false;
+    }
+
+    private void Flip()
+    {
+        // Toggle facing direction
+        facingRight = !facingRight;
+
+        // Flip the player by scaling on the X axis
+        // This will flip all children as well
+        Vector3 localScale = transform.localScale;
+        localScale.x *= -1f;
+        transform.localScale = localScale;
     }
 }
