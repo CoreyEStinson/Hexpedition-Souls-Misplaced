@@ -1,5 +1,7 @@
+using UnityEditor.SearchService;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 
 public class PlayerHealth : MonoBehaviour
 {
@@ -29,12 +31,16 @@ public class PlayerHealth : MonoBehaviour
     private float knockbackTimer = 0f;
     private Rigidbody2D rb;
 
+    private Vector3 startPosition;
+
     private void Awake()
     {
         if (spriteRenderer == null)
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
+
+        startPosition = transform.position;
 
         rb = GetComponent<Rigidbody2D>();
         
@@ -140,7 +146,7 @@ public class PlayerHealth : MonoBehaviour
         invincibilityTimer = invincibilityDuration;
     }
 
-    private void ApplyKnockback(Vector2 damageSourcePosition)
+    public void ApplyKnockback(Vector2 direction)
     {
         if (rb == null)
         {
@@ -148,7 +154,7 @@ public class PlayerHealth : MonoBehaviour
         }
 
         // Calculate knockback direction (away from damage source)
-        Vector2 knockbackDirection = ((Vector2)transform.position - damageSourcePosition).normalized;
+        Vector2 knockbackDirection = direction.normalized;
         
         // Apply horizontal knockback and add some upward force
         Vector2 knockbackVelocity = new Vector2(knockbackDirection.x * knockbackForce, knockbackUpwardForce);
@@ -161,11 +167,13 @@ public class PlayerHealth : MonoBehaviour
         Debug.Log($"Knockback applied: {knockbackVelocity}");
     }
 
-    private void Die()
+    public void Die()
     {
         Debug.Log("Player died!");
         // Add death logic here (e.g., play animation, reload scene, etc.)
         // For now, just reset health
+        // Reload the scene
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         currentHealth = maxHealth;
         UpdateHealthUI();
     }

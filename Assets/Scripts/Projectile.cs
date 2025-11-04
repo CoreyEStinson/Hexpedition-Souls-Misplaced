@@ -44,9 +44,10 @@ public class Projectile : MonoBehaviour
             // Destroy projectile on impact
             Destroy(gameObject);
         }
-        // Destroy on collision with walls/ground
-        else if (collision.CompareTag("Floor") || collision.CompareTag("Wall"))
+        // Destroy on collision with walls/ground (check if tags exist first)
+        else if (!collision.isTrigger)
         {
+            // Hit a solid object (not a trigger), destroy the projectile
             Destroy(gameObject);
         }
     }

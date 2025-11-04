@@ -11,12 +11,11 @@ public class PlayerWeapons : MonoBehaviour
     
     [Header("Attack Settings")]
     [SerializeField] private Transform attackPoint;
-    [SerializeField] private KeyCode attackKey = KeyCode.Mouse0;
-    [SerializeField] private KeyCode nextWeaponKey = KeyCode.E;
-    [SerializeField] private KeyCode previousWeaponKey = KeyCode.Q;
+    [SerializeField] private KeyCode attackKey = KeyCode.E;
     
     [Header("Visual")]
     [SerializeField] private SpriteRenderer weaponSpriteRenderer;
+    [SerializeField] private Animator animator;
     
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
@@ -29,6 +28,7 @@ public class PlayerWeapons : MonoBehaviour
     private float lastAttackTime = -999f;
     private bool facingRight = true;
     private PlayerHealth playerHealth;
+    private Collider2D attackCollider;
     
     private void Awake()
     {
@@ -39,6 +39,11 @@ public class PlayerWeapons : MonoBehaviour
             audioSource = GetComponent<AudioSource>();
         }
         
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+        }
+        
         if (attackPoint == null)
         {
             // Create a default attack point if none is assigned
@@ -47,11 +52,14 @@ public class PlayerWeapons : MonoBehaviour
             attackPointObj.transform.localPosition = new Vector3(0.5f, 0.5f, 0f);
             attackPoint = attackPointObj.transform;
         }
-        
-        // Unlock first weapon by default if we have any
-        if (availableWeapons.Count > 0 && unlockedWeaponNames.Count == 0)
+
+        if (attackPoint != null)
         {
-            UnlockWeapon(availableWeapons[0].weaponName);
+            attackCollider = attackPoint.GetComponent<Collider2D>();
+            if (attackCollider == null)
+            {
+                Debug.LogWarning("Attack point does not have a Collider2D. Melee attacks may not work correctly. Please add a Collider2D to the attack point object.");
+            }
         }
         
         UpdateWeaponVisual();
@@ -70,14 +78,14 @@ public class PlayerWeapons : MonoBehaviour
         // Update facing direction based on movement
         UpdateFacingDirection();
         
-        // Weapon switching
-        if (Input.GetKeyDown(nextWeaponKey))
+        // Weapon switching with number keys (1-9)
+        for (int i = 0; i < 9; i++)
         {
-            SwitchToNextWeapon();
-        }
-        else if (Input.GetKeyDown(previousWeaponKey))
-        {
-            SwitchToPreviousWeapon();
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+            {
+                SwitchToWeaponByIndex(i);
+                break;
+            }
         }
         
         // Mouse wheel weapon switching
@@ -91,8 +99,8 @@ public class PlayerWeapons : MonoBehaviour
             SwitchToPreviousWeapon();
         }
         
-        // Attack
-        if (Input.GetKeyDown(attackKey) || Input.GetMouseButtonDown(0))
+        // Attack with E key or Mouse Button 1 (right click)
+        if (Input.GetKeyDown(attackKey) || Input.GetMouseButtonDown(1))
         {
             TryAttack();
         }
@@ -139,10 +147,39 @@ public class PlayerWeapons : MonoBehaviour
                 UpdateWeaponVisual();
                 OnWeaponChanged?.Invoke(weapon);
             }
+            else
+            {
+                // Switch to the newly unlocked weapon if not the first
+                currentWeaponIndex = unlockedWeaponNames.Count - 1;
+                UpdateWeaponVisual();
+                OnWeaponChanged?.Invoke(weapon);
+            }
         }
         else
         {
             Debug.LogWarning($"Weapon {weaponName} not found in available weapons list!");
+        }
+    }
+    
+    public void SwitchToWeaponByIndex(int index)
+    {
+        if (unlockedWeaponNames.Count == 0)
+        {
+            return;
+        }
+        
+        // Make sure the index is within bounds
+        if (index >= 0 && index < unlockedWeaponNames.Count)
+        {
+            currentWeaponIndex = index;
+            UpdateWeaponVisual();
+            
+            WeaponData currentWeapon = GetCurrentWeapon();
+            if (currentWeapon != null)
+            {
+                Debug.Log($"Switched to: {currentWeapon.weaponName}");
+                OnWeaponChanged?.Invoke(currentWeapon);
+            }
         }
     }
     
@@ -191,10 +228,18 @@ public class PlayerWeapons : MonoBehaviour
     {
         WeaponData currentWeapon = GetCurrentWeapon();
         
-        if (weaponSpriteRenderer != null && currentWeapon != null)
+        if (weaponSpriteRenderer != null)
         {
-            weaponSpriteRenderer.sprite = currentWeapon.weaponIcon;
-            weaponSpriteRenderer.enabled = currentWeapon.weaponIcon != null;
+            if (currentWeapon != null)
+            {
+                weaponSpriteRenderer.sprite = currentWeapon.weaponIcon;
+                weaponSpriteRenderer.enabled = currentWeapon.weaponIcon != null;
+            }
+            else
+            {
+                // No weapon equipped, disable sprite renderer
+                weaponSpriteRenderer.enabled = false;
+            }
         }
     }
     
@@ -215,6 +260,13 @@ public class PlayerWeapons : MonoBehaviour
         }
         
         lastAttackTime = Time.time;
+        
+        // Play attack animation
+        if (animator != null && currentWeapon.attackAnimation != null)
+        {
+            Debug.Log("Playing attack animation: " + currentWeapon.attackAnimation.name);
+            animator.Play(currentWeapon.attackAnimation.name, -1, 0f);
+        }
         
         // Perform attack based on weapon type
         switch (currentWeapon.attackType)
@@ -249,44 +301,45 @@ public class PlayerWeapons : MonoBehaviour
     
     private void PerformMeleeAttack(WeaponData weapon)
     {
-        if (attackPoint == null)
+        if (attackCollider == null)
         {
+            Debug.LogWarning("No attack collider found on the attack point. Cannot perform melee attack.");
             return;
         }
+
+        // Use the attack collider to detect enemies
+        List<Collider2D> hitEnemies = new List<Collider2D>();
+        ContactFilter2D contactFilter = new ContactFilter2D();
+        contactFilter.SetLayerMask(weapon.targetLayers);
+        contactFilter.useTriggers = true;
         
-        // Calculate attack position and size
-        Vector2 attackPosition = attackPoint.position;
-        Vector2 attackOffset = new Vector2(
-            weapon.attackOffset.x * (facingRight ? 1f : -1f),
-            weapon.attackOffset.y
-        );
-        attackPosition += attackOffset;
-        
-        // Detect enemies in range
-        Collider2D[] hitEnemies = Physics2D.OverlapBoxAll(attackPosition, weapon.attackSize, 0f, weapon.targetLayers);
-        
-        foreach (Collider2D enemy in hitEnemies)
+        int hitCount = Physics2D.OverlapCollider(attackCollider, contactFilter, hitEnemies);
+
+        if (hitCount > 0)
         {
-            // Apply damage
-            EnemyHealth enemyHealth = enemy.GetComponent<EnemyHealth>();
-            if (enemyHealth != null)
+            foreach (Collider2D enemy in hitEnemies)
             {
-                enemyHealth.TakeDamage(weapon.damage);
+                // Apply damage
+                EnemyHealth enemyHealth = enemy.GetComponent<EnemyHealth>();
+                if (enemyHealth != null)
+                {
+                    enemyHealth.TakeDamage(weapon.damage);
+                }
+                
+                // Apply knockback
+                Rigidbody2D enemyRb = enemy.GetComponent<Rigidbody2D>();
+                if (enemyRb != null)
+                {
+                    Vector2 knockbackDirection = (enemy.transform.position - transform.position).normalized;
+                    Vector2 knockback = new Vector2(
+                        knockbackDirection.x * weapon.knockbackForce,
+                        weapon.knockbackUpForce
+                    );
+                    enemyRb.linearVelocity = knockback;
+                }
+                
+                Debug.Log($"Hit enemy: {enemy.name}");
             }
-            
-            // Apply knockback
-            Rigidbody2D enemyRb = enemy.GetComponent<Rigidbody2D>();
-            if (enemyRb != null)
-            {
-                Vector2 knockbackDirection = (enemy.transform.position - transform.position).normalized;
-                Vector2 knockback = new Vector2(
-                    knockbackDirection.x * weapon.knockbackForce,
-                    weapon.knockbackUpForce
-                );
-                enemyRb.linearVelocity = knockback;
-            }
-            
-            Debug.Log($"Hit enemy: {enemy.name}");
         }
     }
     
@@ -351,20 +404,6 @@ public class PlayerWeapons : MonoBehaviour
     // Visual debugging
     private void OnDrawGizmosSelected()
     {
-        WeaponData currentWeapon = GetCurrentWeapon();
-        
-        if (currentWeapon != null && attackPoint != null && currentWeapon.attackType == AttackType.Melee)
-        {
-            Gizmos.color = Color.red;
-            
-            Vector2 attackPosition = attackPoint.position;
-            Vector2 attackOffset = new Vector2(
-                currentWeapon.attackOffset.x * (facingRight ? 1f : -1f),
-                currentWeapon.attackOffset.y
-            );
-            attackPosition += attackOffset;
-            
-            Gizmos.DrawWireCube(attackPosition, currentWeapon.attackSize);
-        }
+        // Gizmos are now handled by the collider on the attack point
     }
 }

@@ -22,6 +22,9 @@ public class WeaponData : ScriptableObject
     public GameObject attackEffectPrefab;
     public AudioClip attackSound;
     
+    [Header("Animation")]
+    public AnimationClip attackAnimation;
+    
     [Header("Knockback")]
     public float knockbackForce = 5f;
     public float knockbackUpForce = 2f;

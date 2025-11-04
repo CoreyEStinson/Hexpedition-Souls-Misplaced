@@ -58,7 +58,7 @@ public class EnemyMovement : MonoBehaviour
         
         float desiredSpeed = 0f;
 
-        if (shouldChase)
+        if (shouldChase && playerTransform != null)
         {
             float direction = Mathf.Sign(playerTransform.position.x - transform.position.x);
             if (Mathf.Abs(direction) < 0.01f)
@@ -94,21 +94,35 @@ public class EnemyMovement : MonoBehaviour
 
     private bool IsPlayerWithinRange()
     {
-        if (playerTransform == null)
+        return IsPlayerVisible(Vector2.right) || IsPlayerVisible(Vector2.left);
+    }
+
+    private bool IsPlayerVisible(Vector2 direction)
+    {
+        if (playerTransform == null) return false;
+
+        Vector2 origin = (Vector2)transform.position;
+        RaycastHit2D[] hits = Physics2D.RaycastAll(origin, direction, detectionRange, playerLayer | obstacleLayer);
+
+        float playerDistance = float.MaxValue;
+        float closestObstacleDistance = float.MaxValue;
+
+        foreach (var hit in hits)
         {
-            return false;
+            if (hit.collider.transform == playerTransform)
+            {
+                playerDistance = hit.distance;
+            }
+            else if (((1 << hit.collider.gameObject.layer) & obstacleLayer) != 0)
+            {
+                if (hit.distance < closestObstacleDistance)
+                {
+                    closestObstacleDistance = hit.distance;
+                }
+            }
         }
 
-        // Cast rays to the left and right, checking for obstacles
-        Vector2 origin = transform.position;
-        RaycastHit2D hitRight = Physics2D.Raycast(origin, Vector2.right, detectionRange, playerLayer | obstacleLayer);
-        RaycastHit2D hitLeft = Physics2D.Raycast(origin, Vector2.left, detectionRange, playerLayer | obstacleLayer);
-
-        // Check if we hit the player (not an obstacle)
-        bool canSeeRight = hitRight.collider != null && hitRight.collider.transform == playerTransform;
-        bool canSeeLeft = hitLeft.collider != null && hitLeft.collider.transform == playerTransform;
-
-        return canSeeRight || canSeeLeft;
+        return playerDistance < closestObstacleDistance;
     }
 
     private bool IsGroundAhead()
