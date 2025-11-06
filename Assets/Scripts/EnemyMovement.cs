@@ -15,12 +15,15 @@ public class EnemyMovement : MonoBehaviour
     [SerializeField] private bool enableLedgeCheck = true;
     [SerializeField] private Vector2 ledgeCheckOffset = new Vector2(0.5f, 0f);
     [SerializeField] private float ledgeCheckDistance = 1f;
-    [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private LayerMask groundLayer; // Include your Tilemap layer here
 
     [Header("Wall Check")]
     [SerializeField] private bool enableWallCheck = true;
     [SerializeField] private float wallCheckDistance = 0.5f;
     [SerializeField] private Vector2 wallCheckOffset = new Vector2(0.5f, 0.5f);
+    
+    [Header("Tilemap Compatibility")]
+    [SerializeField] private float raycastSkinWidth = 0.1f; // Small offset to prevent self-collision
 
     [Header("References")]
     [SerializeField] private Transform playerTransform;
@@ -40,6 +43,14 @@ public class EnemyMovement : MonoBehaviour
             {
                 playerTransform = possiblePlayer.transform;
             }
+        }
+        
+        // Ensure Rigidbody2D settings are optimal for tilemap interaction
+        if (body != null)
+        {
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation; // Prevent rotation
         }
     }
 
@@ -134,7 +145,13 @@ public class EnemyMovement : MonoBehaviour
 
         Vector2 origin = (Vector2)transform.position;
         origin += new Vector2(facingRight ? ledgeCheckOffset.x : -ledgeCheckOffset.x, ledgeCheckOffset.y);
+        
+        // Cast ray downward to check for ground (works with Tilemap Collider 2D)
         RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, ledgeCheckDistance, groundLayer);
+        
+        // Debug visualization
+        Debug.DrawRay(origin, Vector2.down * ledgeCheckDistance, hit.collider != null ? Color.green : Color.red);
+        
         return hit.collider != null;
     }
 
@@ -148,7 +165,14 @@ public class EnemyMovement : MonoBehaviour
         Vector2 origin = (Vector2)transform.position;
         origin += new Vector2(facingRight ? wallCheckOffset.x : -wallCheckOffset.x, wallCheckOffset.y);
         Vector2 direction = facingRight ? Vector2.right : Vector2.left;
+        
+        // Cast ray forward to check for walls (works with Tilemap Collider 2D)
+        // Use both obstacle and ground layers to detect tilemap walls
         RaycastHit2D hit = Physics2D.Raycast(origin, direction, wallCheckDistance, obstacleLayer | groundLayer);
+        
+        // Debug visualization
+        Debug.DrawRay(origin, direction * wallCheckDistance, hit.collider != null ? Color.blue : Color.cyan);
+        
         return hit.collider != null;
     }
 
