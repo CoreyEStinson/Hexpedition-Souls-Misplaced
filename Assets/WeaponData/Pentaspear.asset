@@ -12,20 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94b1bd7fef5af594286c5882a1e8e480, type: 3}
   m_Name: Pentaspear
   m_EditorClassIdentifier: 
-  weaponName: 
-  weaponIcon: {fileID: 0}
-  damage: 1
+  weaponName: Pentaspear
+  weaponIcon: {fileID: 21300000, guid: 78466709881aac64da4fbe8c1b390088, type: 3}
+  damage: 2
   attackRange: 1
-  attackCooldown: 0.5
+  attackCooldown: 1
   attackType: 0
   targetLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 128
   attackOffset: {x: 0.5, y: 0}
   attackSize: {x: 1, y: 1}
   attackEffectPrefab: {fileID: 0}
   attackSound: {fileID: 0}
-  attackAnimation: {fileID: 0}
+  attackAnimation: {fileID: 7400000, guid: a9ae813104b47984d8d53847d10bac87, type: 2}
   knockbackForce: 5
   knockbackUpForce: 2
   projectilePrefab: {fileID: 0}

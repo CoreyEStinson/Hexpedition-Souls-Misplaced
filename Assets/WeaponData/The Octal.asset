@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Octal
   m_EditorClassIdentifier: 
   weaponName: The Octal
-  weaponIcon: {fileID: 21300000, guid: 9d39445cec9535e47a12a04a7219d567, type: 3}
+  weaponIcon: {fileID: 21300000, guid: 671d18245c0ff7f459fd1cf46b483444, type: 3}
   damage: 3
   attackRange: 1
   attackCooldown: 5

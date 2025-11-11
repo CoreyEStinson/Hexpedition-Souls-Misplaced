@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94b1bd7fef5af594286c5882a1e8e480, type: 3}
   m_Name: Sword of Rhombus
   m_EditorClassIdentifier: 
-  weaponName: Sword
-  weaponIcon: {fileID: 21300000, guid: 15b0484469440d848989ddaf72bce738, type: 3}
+  weaponName: Sword of Rhombus
+  weaponIcon: {fileID: 21300000, guid: 7cc78663abc97b445bbfd2ed19536548, type: 3}
   damage: 1
   attackRange: 1
   attackCooldown: 0.5

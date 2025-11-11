@@ -26,9 +26,14 @@ public class PlayerWeapons : MonoBehaviour
     public UnityEvent OnAttack;
     
     private float lastAttackTime = -999f;
-    private bool facingRight = true;
     private PlayerHealth playerHealth;
     private Collider2D attackCollider;
+    
+    // Property to get facing direction from player's scale
+    private bool FacingRight
+    {
+        get { return transform.localScale.x > 0f; }
+    }
     
     private void Awake()
     {
@@ -75,9 +80,6 @@ public class PlayerWeapons : MonoBehaviour
             return;
         }
         
-        // Update facing direction based on movement
-        UpdateFacingDirection();
-        
         // Weapon switching with number keys (1-9)
         for (int i = 0; i < 9; i++)
         {
@@ -103,24 +105,6 @@ public class PlayerWeapons : MonoBehaviour
         if (Input.GetKeyDown(attackKey) || Input.GetMouseButtonDown(1))
         {
             TryAttack();
-        }
-    }
-    
-    private void UpdateFacingDirection()
-    {
-        // Check horizontal input to determine facing
-        float horizontal = Input.GetAxis("Horizontal");
-        if (Mathf.Abs(horizontal) > 0.01f)
-        {
-            facingRight = horizontal > 0f;
-        }
-        
-        // Update attack point position based on facing
-        if (attackPoint != null)
-        {
-            Vector3 localPos = attackPoint.localPosition;
-            localPos.x = Mathf.Abs(localPos.x) * (facingRight ? 1f : -1f);
-            attackPoint.localPosition = localPos;
         }
     }
     
@@ -358,7 +342,7 @@ public class PlayerWeapons : MonoBehaviour
         Rigidbody2D projectileRb = projectile.GetComponent<Rigidbody2D>();
         if (projectileRb != null)
         {
-            Vector2 direction = facingRight ? Vector2.right : Vector2.left;
+            Vector2 direction = FacingRight ? Vector2.right : Vector2.left;
             projectileRb.linearVelocity = direction * weapon.projectileSpeed;
         }
         
