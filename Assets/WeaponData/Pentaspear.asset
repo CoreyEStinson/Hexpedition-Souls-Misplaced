@@ -24,7 +24,7 @@ MonoBehaviour:
   attackOffset: {x: 0.5, y: 0}
   attackSize: {x: 1, y: 1}
   attackEffectPrefab: {fileID: 0}
-  attackSound: {fileID: 0}
+  attackSound: {fileID: 8300000, guid: 05e1ebb51863dba488b799e2810d0ff4, type: 3}
   attackAnimation: {fileID: 7400000, guid: a9ae813104b47984d8d53847d10bac87, type: 2}
   knockbackForce: 5
   knockbackUpForce: 2

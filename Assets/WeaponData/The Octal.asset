@@ -25,7 +25,7 @@ MonoBehaviour:
   attackSize: {x: 1, y: 1}
   attackEffectPrefab: {fileID: 0}
   attackSound: {fileID: 8300000, guid: 05e1ebb51863dba488b799e2810d0ff4, type: 3}
-  attackAnimation: {fileID: 7400000, guid: fd2c486cc65209547a75b7fb7d636f60, type: 2}
+  attackAnimation: {fileID: 7400000, guid: 0bcbfa1eab0725342b183701fcc02f7a, type: 2}
   knockbackForce: 5
   knockbackUpForce: 2
   projectilePrefab: {fileID: 0}
